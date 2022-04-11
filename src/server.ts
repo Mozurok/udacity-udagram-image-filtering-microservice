@@ -3,7 +3,7 @@ import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
 (async () => {
-
+  const jimpSupportedTypes = ['jpeg', 'png', 'bmp', 'tiff', 'gif', 'jpg']
   // Init the Express application
   const app = express();
 
@@ -16,14 +16,20 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   app.get( "/filteredimage", async ( req, res ) => {
     const image_url = req.query.image_url || null
 
-    if (!image_url) {
-      return res.send("try GET /filteredimage?image_url={{}}")
+    const checkUrl = image_url.split('.')
+    const imageType = checkUrl[checkUrl.length - 1]
+
+    if (!image_url || !jimpSupportedTypes.includes(imageType)) {
+      return res.status(400).send("this url doesn't seem to contain a valid image or the formats allowed")
     }
 
-    filterImageFromURL(image_url).then((filteredPath) => {
-      res.sendFile(filteredPath)
-      deleteLocalFiles([filteredPath])
-    })
+    const filteredImage = await filterImageFromURL(image_url)
+
+    res.sendFile(filteredImage)
+
+    res.on('finish', function() {
+      deleteLocalFiles([filteredImage])
+    });
 
   } );
 
